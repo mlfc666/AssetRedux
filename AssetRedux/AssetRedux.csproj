@@ -1,8 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
-        <TargetFramework>netstandard2.1</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
         <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RestoreAdditionalProjectSources>
+            https://api.nuget.org/v3/index.json;
+            https://nuget.bepinex.dev/v3/index.json;
+            https://nuget.samboy.dev/v3/index.json
+        </RestoreAdditionalProjectSources>
     </PropertyGroup>
-
+    <PropertyGroup>
+        <CorePath>/home/mlfc/.local/share/Steam/steamapps/common/Territory/BepInEx/core</CorePath>
+        <InteropPath>/home/mlfc/.local/share/Steam/steamapps/common/Territory/BepInEx/interop</InteropPath>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Reference Include="$(InteropPath)/*.dll" Private="false"/>
+    </ItemGroup>
 </Project>
