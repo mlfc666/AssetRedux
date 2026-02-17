@@ -9,22 +9,30 @@ public abstract class BaseResourceModule
     public virtual int Priority => 0;
 
     /// <summary>
-    /// 数据映射表。
-    /// Key: 蓝图的 GUID (通常对应文件夹名)
-    /// Value: 蓝图 JSON 文件的相对路径 (例如 "Blueprints/MyHouse.json")
+    /// 基础资源映射
     /// </summary>
     public virtual Dictionary<string, string> Sprites => new();
 
     public virtual Dictionary<string, string> Textures => new();
     public virtual Dictionary<string, Func<string, string>> TextAssetProcessors => new();
-    public virtual Dictionary<string, string> Blueprints => new();
 
     /// <summary>
-    /// 蓝图预览图映射表 (可选)。
-    /// 这里的 Key 建议与 Blueprints 的 GUID 保持一致。
-    /// 注意：如果此项留空，Patch 会尝试自动去 Sprites 字典中寻找 Key 为 "Blueprint_{GUID}" 的资源。
+    /// 蓝图文件夹列表。
+    /// 每一项应该是相对于 Mod 根目录的路径，例如："Blueprints/Room"
+    /// 框架会自动寻找该目录下的 .sav/.json 文件以及预览图
     /// </summary>
-    public virtual Dictionary<string, string> BlueprintSnapshots => new();
+    public virtual List<string> BlueprintFolders => new();
+
+    // 由框架扫描后填充，供 Patch 使用
+    // Key: GUID, Value: JSON 内容
+    internal Dictionary<string, string> LoadedBlueprints { get; } = new();
+    
+    /// <summary>
+    /// JSON 文件夹合并映射表。
+    /// Key: 游戏资源名 (如 "build")
+    /// Value: 存放多个扩展 JSON 的文件夹相对路径 (如 "Mod_Data/build")
+    /// </summary>
+    public virtual Dictionary<string, string> JsonFolderProcessors => new();
 
     public virtual string Description => string.Empty;
     public virtual bool IsLocked => false;
