@@ -7,16 +7,22 @@ namespace AssetRedux.Patches;
 public static class SpriteRendererPatch
 {
     [HarmonyPrefix]
-    public static void Prefix(ref Sprite value)
+    public static void Prefix(ref Sprite? value)
     {
         if (value == null) return;
 
-        if (Tools.SpriteManager.TryGetSprite(value.name, out Sprite? newSprite))
+        // 核心修复：同理，使用局部变量中转
+        var tempValue = value;
+        Sprite? result = null;
+
+        Tools.SpriteManager.ApplySprite(tempValue.name, (newSprite) =>
         {
-            if (newSprite != null && value.GetInstanceID() != newSprite.GetInstanceID())
-            {
-                value = newSprite;
-            }
+            result = newSprite;
+        });
+
+        if (result != null && tempValue.GetInstanceID() != result.GetInstanceID())
+        {
+            value = result;
         }
     }
 }
