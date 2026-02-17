@@ -1,5 +1,6 @@
 using System.Reflection;
 using AssetRedux.Models;
+using AssetRedux.Services;
 using AssetRedux.Tools;
 using Il2CppInterop.Runtime.Attributes;
 using UnityEngine;
@@ -30,6 +31,9 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
 
         _sceneLoadedDelegate = OnSceneLoaded;
 
+        // 在加载模块前先执行游戏版本校验
+        VersionValidator.CheckGameVersion();
+
         // 初始化扫描并加载所有子模块
         RefreshModules();
     }
@@ -52,6 +56,10 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     public void OnDestroy()
     {
         ModuleRegistry.Clear();
+
+        // 清除版本校验缓存
+        VersionValidator.ClearCache();
+
         if (_sceneLoadedDelegate != null)
         {
             SceneManager.sceneLoaded -= _sceneLoadedDelegate;
@@ -163,14 +171,17 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     [HideFromIl2Cpp]
     public void RefreshModules()
     {
+        // 清理旧数据和校验缓存
         ModuleRegistry.Clear();
+        VersionValidator.ClearCache();
         Plugin.Log.LogInfo("开始扫描程序集资源模块...");
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
         foreach (var assembly in assemblies)
         {
             if (IsSystemAssembly(assembly)) continue;
-
+            // 执行子模块版本校验
+            VersionValidator.ValidateModule(assembly);
             try
             {
                 var types = assembly.GetTypes().Where(t =>
