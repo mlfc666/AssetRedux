@@ -5,7 +5,7 @@ using Object = UnityEngine.Object;
 namespace AssetRedux.Tools;
 
 /// <summary>
-/// 纹理管理中心：负责 3D 贴图与材质纹理的映射、缓存及生命周期管理
+/// 负责 3D 贴图与材质纹理的映射、缓存及生命周期管理
 /// </summary>
 public static class TextureManager
 {
@@ -34,26 +34,26 @@ public static class TextureManager
     {
         texture = null;
 
-        // 1. 查找是否有路径映射
+        // 查找是否有路径映射
         if (!PathMap.TryGetValue(originalName, out string? fullPath))
         {
             return false;
         }
 
-        // 2. 检查实例缓存
+        // 检查实例缓存
         if (InstanceCache.TryGetValue(fullPath, out var cachedTex) && cachedTex != null)
         {
             texture = cachedTex;
             return true;
         }
 
-        // 3. 缓存未命中，从磁盘加载（TextureService 现在是无状态的工具类）
+        // 从磁盘加载
         texture = TextureService.LoadTexture(fullPath);
 
         if (texture != null)
         {
             // 保持名称一致，确保后续逻辑（如根据名称二次查找）不会中断
-            texture.name = originalName; 
+            texture.name = originalName;
             InstanceCache[fullPath] = texture;
             return true;
         }
@@ -67,8 +67,8 @@ public static class TextureManager
     public static void Clear()
     {
         PathMap.Clear();
-        
-        // 生产环境关键：显式销毁 Unity Native 对象
+
+        // 显式销毁 Unity Native 对象
         foreach (var tex in InstanceCache.Values)
         {
             if (tex != null)
@@ -76,7 +76,7 @@ public static class TextureManager
                 Object.Destroy(tex);
             }
         }
-        
+
         InstanceCache.Clear();
         Plugin.Log.LogInfo("[TextureManager] 纹理管理中心已完成内存清理。");
     }

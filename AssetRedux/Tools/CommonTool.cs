@@ -21,7 +21,6 @@ public static class CommonTool
         string finalBase = sourceDir ?? AppContext.BaseDirectory;
         string fullPath = Path.Combine(finalBase, relativePath);
 
-        // --- 新增：防御性路径校验 ---
         try
         {
             // 检查文件或目录是否存在

@@ -8,18 +8,15 @@ public abstract class BaseResourceModule
     public virtual string ModuleName => "UnknownModule";
     public virtual int Priority => 0;
 
-    // --- 原有资源字典 ---
-    public virtual Dictionary<string, string> Sprites => new();
-    public virtual Dictionary<string, string> Textures => new();
-    public virtual Dictionary<string, Func<string, string>> TextAssetProcessors => new();
-
-    // --- 新增：蓝图注入支持 ---
-
     /// <summary>
-    /// 蓝图数据映射表。
+    /// 数据映射表。
     /// Key: 蓝图的 GUID (通常对应文件夹名)
     /// Value: 蓝图 JSON 文件的相对路径 (例如 "Blueprints/MyHouse.json")
     /// </summary>
+    public virtual Dictionary<string, string> Sprites => new();
+
+    public virtual Dictionary<string, string> Textures => new();
+    public virtual Dictionary<string, Func<string, string>> TextAssetProcessors => new();
     public virtual Dictionary<string, string> Blueprints => new();
 
     /// <summary>

@@ -7,19 +7,19 @@ public static class ModuleRegistry
 {
     private static readonly List<BaseResourceModule> Modules = new();
     
-    // 补全用途：用于 RegisterModule 入口处的重复检查
+    // 用于 RegisterModule 入口处的重复检查
     private static readonly HashSet<string> ProcessedAssemblies = new();
 
     public static IReadOnlyList<BaseResourceModule> ActiveModules => Modules;
 
     /// <summary>
-    /// 核心方法：将模块加入账本并分发资源路径
+    /// 将模块加入列表并分发资源路径
     /// </summary>
     public static void RegisterModule(BaseResourceModule? module, Assembly sourceAssembly)
     {
         if (module == null) return;
 
-        // 【补全逻辑】检查程序集是否已处理，防止重复注册导致的优先级混乱或内存浪费
+        // 检查程序集是否已处理，防止重复注册导致的优先级混乱或内存浪费
         string? asmName = sourceAssembly.FullName;
         if (asmName != null)
         {
@@ -30,15 +30,15 @@ public static class ModuleRegistry
             }
         }
 
-        // 1. 预处理：路径转绝对 & 蓝图 JSON 读入内存
+        // 路径转绝对 & 蓝图 JSON 读入内存
         PreprocessModule(module, sourceAssembly);
 
         Modules.Add(module);
 
-        // 2. 优先级排序
+        // 优先级排序
         Modules.Sort((a, b) => b.Priority.CompareTo(a.Priority));
 
-        // 3. 将资源分发给对应的资源管理器
+        // 将资源分发给对应的资源管理器
         SyncToManagers(module);
         
         Plugin.Log.LogInfo($"[Registry] 模块 '{module.ModuleName}' 注册成功 (优先级: {module.Priority})");

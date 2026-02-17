@@ -14,7 +14,7 @@ public static class ImagePatch
     {
         if (value == null) return;
 
-        // 核心修复：将 ref 里的值拷贝给一个局部变量
+        // 将 ref 里的值拷贝给一个局部变量
         var tempValue = value;
         Sprite? result = null;
 

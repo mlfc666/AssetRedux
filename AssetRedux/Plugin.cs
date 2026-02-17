@@ -21,7 +21,7 @@ public class Plugin : BasePlugin
         // 强制控制台 UTF-8 (解决中文乱码)
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Log = base.Log;
-        
+
         // 应用 Harmony 补丁
         // PatchAll 比较耗时，放在最后，确保前面关键组件已就绪
         new Harmony(PluginInfo.PluginGuid).PatchAll();

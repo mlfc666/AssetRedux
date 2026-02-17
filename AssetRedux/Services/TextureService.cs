@@ -23,7 +23,7 @@ public static class TextureService
                 texture.name = Path.GetFileNameWithoutExtension(fullPath);
                 return texture;
             }
-            
+
             // 加载失败必须销毁，否则 native 句柄会残留
             Object.Destroy(texture);
         }
@@ -32,6 +32,7 @@ public static class TextureService
             Plugin.Log.LogError($"[TextureService] 磁盘读取异常: {fullPath} - {e.Message}");
             if (texture != null) Object.Destroy(texture);
         }
+
         return null;
     }
 }

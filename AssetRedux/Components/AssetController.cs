@@ -14,11 +14,11 @@ namespace AssetRedux.Components;
 public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
 {
     private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
-    
+
     // 委托引用，防止被 GC 或 IL2CPP 卸载
     private Action<Scene, LoadSceneMode>? _sceneLoadedDelegate;
 
-    // --- 性能与安全锁 ---
+    // 性能与安全锁
     private bool _isRefreshing;
     private const float RefreshDebounceTime = 0.5f; // 防抖延迟时间（秒）
 
@@ -27,10 +27,10 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     {
         // 确保控制器跨场景不销毁
         DontDestroyOnLoad(gameObject);
-        
+
         _sceneLoadedDelegate = OnSceneLoaded;
 
-        // 1. 初始化扫描并加载所有子模块
+        // 初始化扫描并加载所有子模块
         RefreshModules();
     }
 
@@ -38,19 +38,20 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     public void Start()
     {
         Plugin.Log.LogInfo("AssetRedux 核心控制器已启动并准备就绪。");
-        
+
         if (_sceneLoadedDelegate != null)
         {
             SceneManager.sceneLoaded += _sceneLoadedDelegate;
         }
-        
-        // 启动时首次触发刷新（带延迟以确保场景对象就绪）
+
+        // 启动时首次触发刷新
         RequestRefresh();
     }
 
     [HideFromIl2Cpp]
     public void OnDestroy()
     {
+        ModuleRegistry.Clear();
         if (_sceneLoadedDelegate != null)
         {
             SceneManager.sceneLoaded -= _sceneLoadedDelegate;
@@ -106,19 +107,19 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     [HideFromIl2Cpp]
     private void RefreshActiveObjects()
     {
-        Plugin.Log.LogInfo("[AssetRedux] 正在执行全域资源热刷新（单次扫描优化版）...");
+        Plugin.Log.LogInfo("[AssetRedux] 正在执行全域资源热刷新...");
 
-        // 获取内存中所有 Component（包含不活跃对象，确保全面覆盖）
+        // 获取内存中所有 Component
         var allComponents = Resources.FindObjectsOfTypeAll<Component>();
 
         foreach (var comp in allComponents)
         {
             if (comp == null) continue;
 
-            // 逻辑 A: 处理 UI Image
+            // 处理 UI Image
             if (comp.TryCast<Image>() is { } img && img.sprite != null)
             {
-                Tools.SpriteManager.ApplySprite(img.sprite.name, (newSprite) => 
+                Tools.SpriteManager.ApplySprite(img.sprite.name, (newSprite) =>
                 {
                     if (img.sprite.GetInstanceID() != newSprite.GetInstanceID())
                         img.sprite = newSprite;
@@ -126,10 +127,10 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
                 continue;
             }
 
-            // 逻辑 B: 处理 2D SpriteRenderer
+            // 处理 2D SpriteRenderer
             if (comp.TryCast<SpriteRenderer>() is { } sr && sr.sprite != null)
             {
-                Tools.SpriteManager.ApplySprite(sr.sprite.name, (newSprite) => 
+                Tools.SpriteManager.ApplySprite(sr.sprite.name, (newSprite) =>
                 {
                     if (sr.sprite.GetInstanceID() != newSprite.GetInstanceID())
                         sr.sprite = newSprite;
@@ -137,7 +138,7 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
                 continue;
             }
 
-            // 逻辑 C: 处理 3D Renderer 材质贴图
+            // 处理 3D Renderer 材质贴图
             if (comp.TryCast<Renderer>() is { } ren && ren.sharedMaterial != null)
             {
                 Material mat = ren.sharedMaterial;
@@ -152,6 +153,7 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
                 }
             }
         }
+
         Plugin.Log.LogInfo("[AssetRedux] 全域资源刷新完成。");
     }
 
@@ -161,7 +163,8 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     [HideFromIl2Cpp]
     public void RefreshModules()
     {
-        Plugin.Log.LogInfo("开始全域扫描程序集资源模块...");
+        ModuleRegistry.Clear();
+        Plugin.Log.LogInfo("开始扫描程序集资源模块...");
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
         foreach (var assembly in assemblies)
@@ -170,7 +173,7 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
 
             try
             {
-                var types = assembly.GetTypes().Where(t => 
+                var types = assembly.GetTypes().Where(t =>
                     typeof(BaseResourceModule).IsAssignableFrom(t) && t is { IsInterface: false, IsAbstract: false });
 
                 foreach (var type in types)
@@ -185,7 +188,7 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
             catch (Exception e)
             {
                 // 仅在 Debug 模式记录，因为很多动态程序集不支持读取 Types
-                Plugin.Log.LogDebug($"跳过程序集 {assembly.GetName().Name}: {e.Message}");
+                Plugin.Log.LogWarning($"跳过程序集 {assembly.GetName().Name}: {e.Message}");
             }
         }
     }
@@ -194,14 +197,14 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     private bool IsSystemAssembly(Assembly assembly)
     {
         string? asmName = assembly.FullName?.ToLower();
-        return asmName != null && (asmName.StartsWith("system") || 
-                                   asmName.StartsWith("microsoft") || 
-                                   asmName.StartsWith("unityengine") || 
+        return asmName != null && (asmName.StartsWith("system") ||
+                                   asmName.StartsWith("microsoft") ||
+                                   asmName.StartsWith("unityengine") ||
                                    asmName.StartsWith("mscorlib") ||
                                    asmName.StartsWith("netstandard") ||
                                    asmName.StartsWith("interop") ||
                                    asmName.StartsWith("bepinex") ||
                                    asmName.StartsWith("unhollower") ||
-                                   asmName.StartsWith("harmony")); 
+                                   asmName.StartsWith("harmony"));
     }
 }

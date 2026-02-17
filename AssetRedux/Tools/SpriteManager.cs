@@ -11,16 +11,14 @@ public static class SpriteManager
 
     public static void RegisterSprite(string name, string path) => PathMap[name] = path;
 
-    public static bool ApplySprite(string? originalName, Action<Sprite> applyAction)
+    public static void ApplySprite(string? originalName, Action<Sprite> applyAction)
     {
-        if (string.IsNullOrEmpty(originalName)) return false;
+        if (string.IsNullOrEmpty(originalName)) return;
 
         if (TryGetSprite(originalName, out var customSprite) && customSprite != null)
         {
             applyAction(customSprite);
-            return true;
         }
-        return false;
     }
 
     private static bool TryGetSprite(string name, out Sprite? sprite)
@@ -59,6 +57,7 @@ public static class SpriteManager
                 Object.Destroy(s); // 销毁 Sprite 对象
             }
         }
+
         SpriteCache.Clear();
     }
 }

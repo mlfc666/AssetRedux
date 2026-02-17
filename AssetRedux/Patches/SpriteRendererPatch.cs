@@ -11,14 +11,11 @@ public static class SpriteRendererPatch
     {
         if (value == null) return;
 
-        // 核心修复：同理，使用局部变量中转
+        // 使用局部变量中转
         var tempValue = value;
         Sprite? result = null;
 
-        Tools.SpriteManager.ApplySprite(tempValue.name, (newSprite) =>
-        {
-            result = newSprite;
-        });
+        Tools.SpriteManager.ApplySprite(tempValue.name, (newSprite) => { result = newSprite; });
 
         if (result != null && tempValue.GetInstanceID() != result.GetInstanceID())
         {

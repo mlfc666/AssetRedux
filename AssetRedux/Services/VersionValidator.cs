@@ -19,7 +19,7 @@ public static class VersionValidator
     {
         string? asmName = assembly.FullName;
 
-        // 1. 检查缓存，避免重复反射
+        // 检查缓存，避免重复反射
         if (asmName != null && ValidationCache.TryGetValue(asmName, out bool cachedResult))
         {
             return cachedResult;
@@ -34,7 +34,7 @@ public static class VersionValidator
     {
         try
         {
-            // 优化点：使用 Try-Catch 包裹 GetTypes，因为这是反射中最容易崩溃的地方
+            // 使用 Try-Catch 包裹 GetTypes，防止反射崩溃
             Type[] types;
             try
             {
