@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Reflection;
 using AssetRedux.Models;
 using AssetRedux.Services;
@@ -6,6 +7,7 @@ using Il2CppInterop.Runtime.Attributes;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using BepInEx.Unity.IL2CPP.Utils;
 
 namespace AssetRedux.Components;
 
@@ -87,50 +89,48 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     }
 
     /// <summary>
-    /// 内部执行包装：处理原子锁
+    /// 启动异步刷新协程
     /// </summary>
     [HideFromIl2Cpp]
     private void ExecuteRefreshInternal()
     {
         if (_isRefreshing) return;
-
-        try
-        {
-            _isRefreshing = true;
-            RefreshActiveObjects();
-        }
-        catch (Exception e)
-        {
-            Plugin.Log.LogError($"[AssetRedux] 全域资源刷新期间发生异常: {e.Message}");
-        }
-        finally
-        {
-            _isRefreshing = false;
-        }
+        this.StartCoroutine(RefreshActiveObjectsCoroutine());
     }
 
     /// <summary>
-    /// 核心逻辑：单次全域扫描，对所有活动对象进行资源重定向
+    /// 分帧全域扫描，支持异步资源加载，确保 FPS 稳定
     /// </summary>
     [HideFromIl2Cpp]
-    private void RefreshActiveObjects()
+    private IEnumerator RefreshActiveObjectsCoroutine()
     {
-        Plugin.Log.LogInfo("[AssetRedux] 正在执行全域资源热刷新...");
+        _isRefreshing = true;
+        Plugin.Log.LogInfo("[AssetRedux] 正在执行全域资源异步热刷新...");
 
         // 获取内存中所有 Component
         var allComponents = Resources.FindObjectsOfTypeAll<Component>();
+        int count = 0;
 
         foreach (var comp in allComponents)
         {
             if (comp == null) continue;
 
+            // 每扫描 500 个组件让出主线程一帧，防止游戏卡死
+            count++;
+            if (count % 500 == 0) yield return null;
+
             // 处理 UI Image
             if (comp.TryCast<Image>() is { } img && img.sprite != null)
             {
-                Tools.SpriteManager.ApplySprite(img.sprite.name, (newSprite) =>
+                string spriteName = img.sprite.name;
+                Tools.SpriteManager.GetSpriteAsync(this, spriteName, (newSprite) =>
                 {
-                    if (img.sprite.GetInstanceID() != newSprite.GetInstanceID())
-                        img.sprite = newSprite;
+                    // 回调检查：确保组件在异步加载期间没被销毁
+                    if (newSprite != null && img != null && img.sprite != null)
+                    {
+                        if (img.sprite.GetInstanceID() != newSprite.GetInstanceID())
+                            img.sprite = newSprite;
+                    }
                 });
                 continue;
             }
@@ -138,10 +138,14 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
             // 处理 2D SpriteRenderer
             if (comp.TryCast<SpriteRenderer>() is { } sr && sr.sprite != null)
             {
-                Tools.SpriteManager.ApplySprite(sr.sprite.name, (newSprite) =>
+                string spriteName = sr.sprite.name;
+                Tools.SpriteManager.GetSpriteAsync(this, spriteName, (newSprite) =>
                 {
-                    if (sr.sprite.GetInstanceID() != newSprite.GetInstanceID())
-                        sr.sprite = newSprite;
+                    if (newSprite != null && sr != null && sr.sprite != null)
+                    {
+                        if (sr.sprite.GetInstanceID() != newSprite.GetInstanceID())
+                            sr.sprite = newSprite;
+                    }
                 });
                 continue;
             }
@@ -152,17 +156,21 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
                 Material mat = ren.sharedMaterial;
                 if (mat.HasProperty(MainTexId) && mat.mainTexture != null)
                 {
-                    var oldTex = mat.mainTexture;
-                    if (TextureManager.TryGetTexture(oldTex.name, out var customTex) && customTex != null)
+                    string texName = mat.mainTexture.name;
+                    TextureManager.GetTextureAsync(this, texName, (customTex) =>
                     {
-                        if (oldTex.GetInstanceID() != customTex.GetInstanceID())
-                            mat.mainTexture = customTex;
-                    }
+                        if (customTex != null && mat != null && mat.mainTexture != null)
+                        {
+                            if (mat.mainTexture.GetInstanceID() != customTex.GetInstanceID())
+                                mat.mainTexture = customTex;
+                        }
+                    });
                 }
             }
         }
 
-        Plugin.Log.LogInfo("[AssetRedux] 全域资源刷新完成。");
+        _isRefreshing = false;
+        Plugin.Log.LogInfo("[AssetRedux] 全域异步刷新指令已分发完毕。");
     }
 
     /// <summary>
