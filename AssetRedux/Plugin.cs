@@ -21,7 +21,7 @@ public class Plugin : BasePlugin
         Log = base.Log;
 
         // 注册 IL2CPP 类型 
-        ClassInjector.RegisterTypeInIl2Cpp<AssetController>();
+        ClassInjector.RegisterTypeInIl2Cpp<AssetReduxController>();
 
         // 创建控制器
         var go = new GameObject(PluginInfo.ControllerName);
@@ -29,7 +29,7 @@ public class Plugin : BasePlugin
         go.hideFlags = HideFlags.HideAndDontSave; // 防止被游戏内的清理脚本误删
 
         // 挂载脚本
-        go.AddComponent<AssetController>();
+        go.AddComponent<AssetReduxController>();
 
         // 应用 Harmony 补丁
         // PatchAll 比较耗时，放在最后，确保前面关键组件已就绪
