@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace AssetRedux;
 
-[BepInPlugin(PluginInfo.PluginGuid, PluginInfo.PluginName, PluginInfo.PluginVersion)]
+[BepInPlugin(AssetReduxInfo.PluginGuid, AssetReduxInfo.PluginName, AssetReduxInfo.PluginVersion)]
 [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
 public class Plugin : BasePlugin
 {
@@ -24,13 +24,13 @@ public class Plugin : BasePlugin
 
         // 应用 Harmony 补丁
         // PatchAll 比较耗时，放在最后，确保前面关键组件已就绪
-        new Harmony(PluginInfo.PluginGuid).PatchAll();
+        new Harmony(AssetReduxInfo.PluginGuid).PatchAll();
 
         // 注册 IL2CPP 类型 
         ClassInjector.RegisterTypeInIl2Cpp<AssetReduxController>();
 
         // 创建控制器
-        var go = new GameObject(PluginInfo.ControllerName);
+        var go = new GameObject(AssetReduxInfo.ControllerName);
         Object.DontDestroyOnLoad(go);
         go.hideFlags = HideFlags.HideAndDontSave; // 防止被游戏内的清理脚本误删
 
@@ -39,7 +39,7 @@ public class Plugin : BasePlugin
     }
 }
 
-public static class PluginInfo
+public static class AssetReduxInfo
 {
     public const string PluginGuid = "moe.mlfc.assetredux";
     public const string PluginName = "MlfcAssetRedux";

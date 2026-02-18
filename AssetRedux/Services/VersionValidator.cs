@@ -27,10 +27,10 @@ public static class VersionValidator
             _cachedGameVersion = versionAsset.text.Trim();
             // 校验：插件核心 vs 游戏版本
             // 假设 PluginInfo.TargetVersion 是插件定义的兼容游戏版本
-            if (_cachedGameVersion != PluginInfo.TargetVersion)
+            if (_cachedGameVersion != AssetReduxInfo.TargetVersion)
             {
                 Plugin.Log.LogWarning(
-                    $"[VersionCheck] 游戏版本不匹配：核心支持 [{PluginInfo.TargetVersion}]，当前环境 [{_cachedGameVersion}]。程序将继续运行，但可能存在不稳定性。");
+                    $"[VersionCheck] 游戏版本不匹配：核心支持 [{AssetReduxInfo.TargetVersion}]，当前环境 [{_cachedGameVersion}]。程序将继续运行，但可能存在不稳定性。");
             }
             else
             {
@@ -72,7 +72,7 @@ public static class VersionValidator
 
             string? targetVersion = field.GetValue(null)?.ToString();
             // 校验：子模块 vs 插件版本 (PluginInfo.PluginVersion)
-            string currentPluginVersion = PluginInfo.PluginVersion;
+            string currentPluginVersion = AssetReduxInfo.PluginVersion;
 
             if (!string.Equals(targetVersion, currentPluginVersion, StringComparison.OrdinalIgnoreCase))
             {
