@@ -3,6 +3,7 @@ using System.Reflection;
 using AssetRedux.Models;
 using AssetRedux.Services;
 using AssetRedux.Tools;
+using BepInEx.Unity.IL2CPP;
 using Il2CppInterop.Runtime.Attributes;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -25,7 +26,6 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     private bool _isRefreshing;
     private const float RefreshDebounceTime = 0.5f; // 防抖延迟时间（秒）
 
-    [HideFromIl2Cpp]
     public void Awake()
     {
         // 确保控制器跨场景不销毁
@@ -36,11 +36,12 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
         // 在加载模块前先执行游戏版本校验
         VersionValidator.CheckGameVersion();
 
-        // 初始化扫描并加载所有子模块
+        // 监听所有插件加载完成
+        IL2CPPChainloader.Instance.Finished += OnAllPluginsLoaded;
+
         RefreshModules();
     }
 
-    [HideFromIl2Cpp]
     public void Start()
     {
         Plugin.Log.LogInfo("AssetRedux 核心控制器已启动并准备就绪。");
@@ -50,11 +51,12 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
             SceneManager.sceneLoaded += _sceneLoadedDelegate;
         }
 
+        
+
         // 启动时首次触发刷新
         RequestRefresh();
     }
 
-    [HideFromIl2Cpp]
     public void OnDestroy()
     {
         ModuleRegistry.Clear();
@@ -68,7 +70,6 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
         }
     }
 
-    [HideFromIl2Cpp]
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         Plugin.Log.LogInfo($"[AssetRedux] 检测到场景 [{scene.name}] 加载，准备重定向资源...");
@@ -79,7 +80,6 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     /// 公开的刷新请求接口。
     /// 采用防抖机制：如果在短时间内连续收到多个请求，只会执行最后一次。
     /// </summary>
-    [HideFromIl2Cpp]
     public void RequestRefresh()
     {
         // 取消之前还未执行的刷新任务
@@ -91,7 +91,6 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     /// <summary>
     /// 启动异步刷新协程
     /// </summary>
-    [HideFromIl2Cpp]
     private void ExecuteRefreshInternal()
     {
         if (_isRefreshing) return;
@@ -101,7 +100,6 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     /// <summary>
     /// 分帧全域扫描，支持异步资源加载，确保 FPS 稳定
     /// </summary>
-    [HideFromIl2Cpp]
     private IEnumerator RefreshActiveObjectsCoroutine()
     {
         _isRefreshing = true;
@@ -176,7 +174,6 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
     /// <summary>
     /// 扫描所有程序集以注册资源模块
     /// </summary>
-    [HideFromIl2Cpp]
     public void RefreshModules()
     {
         // 清理旧数据和校验缓存
@@ -212,7 +209,15 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
         }
     }
 
-    [HideFromIl2Cpp]
+    private void OnAllPluginsLoaded()
+    {
+        // 取消订阅防止重复
+        IL2CPPChainloader.Instance.Finished -= OnAllPluginsLoaded;
+        Plugin.Log.LogInfo("[AssetRedux] 全部插件加载完毕回调触发。");
+        RefreshModules();
+        RequestRefresh();
+    }
+
     private bool IsSystemAssembly(Assembly assembly)
     {
         string? asmName = assembly.FullName?.ToLower();
