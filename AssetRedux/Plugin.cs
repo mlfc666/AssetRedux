@@ -43,7 +43,7 @@ public static class PluginInfo
 {
     public const string PluginGuid = "moe.mlfc.assetredux";
     public const string PluginName = "MlfcAssetRedux";
-    public const string PluginVersion = "1.0.20260214.21";
+    public const string PluginVersion = "1.0.20260218.18";
     public const string ControllerName = PluginName + "Controller";
     public const string TargetVersion = PluginVersion;
 }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ModMetaData>
+  <name>[AssetRedux]资源重制框架</name>
+  <authors>
+    <li>梦落凡尘</li>
+  </authors>
+  <description>
+    AssetRedux 是一个专为 Unity IL2CPP 环境设计的资源重定向框架。该框架旨在为 《领地：种田与征战 (Territory: Farming and Warfare)》 提供一套高性能、异步且内存安全的方案，用于在运行时动态替换游戏内的纹理 (Texture2D)、精灵 (Sprite) 以及文本资源 (TextAsset)
+  </description>
+  <url>https://github.com/mlfc666/AssetRedux</url>
+  <packageId>moe.mlfc.assetredux</packageId>
+  <supportedVersions>
+    <li>1.0</li>
+  </supportedVersions>
+  <modVersion>1.0.20260218.18</modVersion>
+</ModMetaData>
