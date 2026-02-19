@@ -4,7 +4,6 @@ using AssetRedux.Models;
 using AssetRedux.Services;
 using AssetRedux.Tools;
 using BepInEx.Unity.IL2CPP;
-using Il2CppInterop.Runtime.Attributes;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -35,11 +34,18 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
 
         // 在加载模块前先执行游戏版本校验
         VersionValidator.CheckGameVersion();
+        ModuleRegistry.Clear();
+        VersionValidator.ClearCache();
+        IL2CPPChainloader.Instance.PluginLoad += (_, assembly, _) =>
+        {
+            // 直接针对当前加载的程序集进行扫描，无需遍历 AppDomain
+            ScanSpecificAssembly(assembly);
+        };
 
         // 监听所有插件加载完成
-        IL2CPPChainloader.Instance.Finished += OnAllPluginsLoaded;
-
-        RefreshModules();
+        // IL2CPPChainloader.Instance.Finished += OnAllPluginsLoaded;
+        //
+        // RefreshModules();
     }
 
     public void Start()
@@ -51,7 +57,6 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
             SceneManager.sceneLoaded += _sceneLoadedDelegate;
         }
 
-        
 
         // 启动时首次触发刷新
         RequestRefresh();
@@ -171,52 +176,90 @@ public class AssetReduxController(IntPtr ptr) : MonoBehaviour(ptr)
         Plugin.Log.LogInfo("[AssetRedux] 全域异步刷新指令已分发完毕。");
     }
 
-    /// <summary>
-    /// 扫描所有程序集以注册资源模块
-    /// </summary>
-    public void RefreshModules()
-    {
-        // 清理旧数据和校验缓存
-        ModuleRegistry.Clear();
-        VersionValidator.ClearCache();
-        Plugin.Log.LogInfo("开始扫描程序集资源模块...");
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+    // /// <summary>
+    // /// 扫描所有程序集以注册资源模块
+    // /// </summary>
+    // public void RefreshModules()
+    // {
+    //     // 清理旧数据和校验缓存
+    //     ModuleRegistry.Clear();
+    //     VersionValidator.ClearCache();
+    //     Plugin.Log.LogInfo("开始扫描程序集资源模块...");
+    //     var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+    //
+    //     foreach (var assembly in assemblies)
+    //     {
+    //         if (IsSystemAssembly(assembly)) continue;
+    //         // 执行子模块版本校验
+    //         VersionValidator.ValidateModule(assembly);
+    //         try
+    //         {
+    //             var types = assembly.GetTypes().Where(t =>
+    //                 typeof(BaseResourceModule).IsAssignableFrom(t) && t is { IsInterface: false, IsAbstract: false });
+    //
+    //             foreach (var type in types)
+    //             {
+    //                 if (Activator.CreateInstance(type) is BaseResourceModule module)
+    //                 {
+    //                     // 注册模块逻辑内部已包含 CommonTool 的路径预检
+    //                     ModuleRegistry.RegisterModule(module, assembly);
+    //                 }
+    //             }
+    //         }
+    //         catch (Exception e)
+    //         {
+    //             // 仅在 Debug 模式记录，因为很多动态程序集不支持读取 Types
+    //             Plugin.Log.LogWarning($"跳过程序集 {assembly.GetName().Name}: {e.Message}");
+    //         }
+    //     }
+    // }
 
-        foreach (var assembly in assemblies)
+    /// <summary>
+    /// 针对单个程序集的精准扫描
+    /// </summary>
+    private void ScanSpecificAssembly(Assembly assembly)
+    {
+        if (IsSystemAssembly(assembly)) return;
+        VersionValidator.ValidateModule(assembly);
+        try
         {
-            if (IsSystemAssembly(assembly)) continue;
-            // 执行子模块版本校验
-            VersionValidator.ValidateModule(assembly);
+            // 这里的异常处理非常关键，防止单个 DLL 加载失败导致框架卡死
+            Type[] types;
             try
             {
-                var types = assembly.GetTypes().Where(t =>
-                    typeof(BaseResourceModule).IsAssignableFrom(t) && t is { IsInterface: false, IsAbstract: false });
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException e)
+            {
+                types = e.Types.Where(t => t != null).ToArray()!;
+            }
 
-                foreach (var type in types)
+            var moduleTypes = types.Where(t =>
+                typeof(BaseResourceModule).IsAssignableFrom(t) && t is { IsInterface: false, IsAbstract: false });
+
+            foreach (var type in moduleTypes)
+            {
+                if (Activator.CreateInstance(type) is BaseResourceModule module)
                 {
-                    if (Activator.CreateInstance(type) is BaseResourceModule module)
-                    {
-                        // 注册模块逻辑内部已包含 CommonTool 的路径预检
-                        ModuleRegistry.RegisterModule(module, assembly);
-                    }
+                    // 调用 ModuleRegistry 进行注册
+                    ModuleRegistry.RegisterModule(module, assembly);
                 }
             }
-            catch (Exception e)
-            {
-                // 仅在 Debug 模式记录，因为很多动态程序集不支持读取 Types
-                Plugin.Log.LogWarning($"跳过程序集 {assembly.GetName().Name}: {e.Message}");
-            }
+        }
+        catch (Exception e)
+        {
+            Plugin.Log.LogDebug($"[Registry] 扫描程序集 {assembly.GetName().Name} 时跳过: {e.Message}");
         }
     }
 
-    private void OnAllPluginsLoaded()
-    {
-        // 取消订阅防止重复
-        IL2CPPChainloader.Instance.Finished -= OnAllPluginsLoaded;
-        Plugin.Log.LogInfo("[AssetRedux] 全部插件加载完毕回调触发。");
-        RefreshModules();
-        RequestRefresh();
-    }
+    // private void OnAllPluginsLoaded()
+    // {
+    //     // 取消订阅防止重复
+    //     IL2CPPChainloader.Instance.Finished -= OnAllPluginsLoaded;
+    //     Plugin.Log.LogInfo("[AssetRedux] 全部插件加载完毕回调触发。");
+    //     RefreshModules();
+    //     RequestRefresh();
+    // }
 
     private bool IsSystemAssembly(Assembly assembly)
     {
