@@ -19,7 +19,16 @@ public class Plugin : BasePlugin
     public override void Load()
     {
         // 强制控制台 UTF-8 (解决中文乱码)
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        try
+        {
+            // 尝试设置编码
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+        }
+        catch
+        {
+            /* 忽略任何控制台初始化错误 */
+        }
+
         Log = base.Log;
 
         // 应用 Harmony 补丁
