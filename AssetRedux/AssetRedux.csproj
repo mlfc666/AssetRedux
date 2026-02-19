@@ -21,4 +21,15 @@
     <ItemGroup>
         <Reference Include="$(InteropPath)/*.dll" Private="false"/>
     </ItemGroup>
+
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <PropertyGroup>
+            <ModOutDir>$(ProjectDir)../dist/Assemblies/</ModOutDir>
+        </PropertyGroup>
+        <MakeDir Directories="$(ModOutDir)" />
+        <Copy SourceFiles="$(TargetDir)$(TargetName).dll"
+              DestinationFiles="$(ModOutDir)$(TargetName).dll"
+              SkipUnchangedFiles="true" />
+        <Message Importance="high" Text="成功：DLL 已输出至发布目录 -> $(ModOutDir)" />
+    </Target>
 </Project>
